@@ -14,22 +14,6 @@ describe("Decoder", function () {
     const trustusPaymagic = await TrustusPaymagic.deploy(accounts[0].address);
     await trustusPaymagic.deployed();
 
-    const addrArray = [
-      "0x0D79AfBF97a401968836b9D906F3f87b20d45A72",
-      "0x0D79AfBF97a401968836b9D906F3f87b20d45A72",
-      "0x0D79AfBF97a401968836b9D906F3f87b20d45A72",
-      "0x0D79AfBF97a401968836b9D906F3f87b20d45A72",
-      "0x0D79AfBF97a401968836b9D906F3f87b20d45A72",
-      "0x0D79AfBF97a401968836b9D906F3f87b20d45A72",
-      "0x0D79AfBF97a401968836b9D906F3f87b20d45A72",
-      "0x0D79AfBF97a401968836b9D906F3f87b20d45A72"
-    ];
-
-    // const priceArray = [
-    //   500000000, 500000000, 500000000, 500000000, 500000000, 500000000,
-    //   500000000, 500000000
-    // ];
-
     const nestedArray = [
       ["0x0D79AfBF97a401968836b9D906F3f87b20d45A72", 500000000],
       ["0x0D79AfBF97a401968836b9D906F3f87b20d45A72", 500000000],
@@ -41,25 +25,13 @@ describe("Decoder", function () {
       ["0x0D79AfBF97a401968836b9D906F3f87b20d45A72", 500000000]
     ];
 
-    // const encodedPayload = ethers.utils.defaultAbiCoder.encode(
-    //   ["address[]", "uint256[]"],
-    //   [addrArray, priceArray]
-    // );
-
     const encodedNested = ethers.utils.defaultAbiCoder.encode(
       ["(address,uint256)[]"],
       [nestedArray]
     );
 
-    // const tx = await test.decoder(encodedPayload);
-    // await tx.wait();
-
     const tx = await test.decoderNested(encodedNested);
     await tx.wait();
-
-
-    
-
 
     const {timestamp} = await hre.ethers.provider.getBlock();
 
@@ -98,12 +70,10 @@ describe("Decoder", function () {
       ]
     }
 
-
-
     const signature = await accounts[0]._signTypedData(domain, types, message)
     const { v, r, s } = ethers.utils.splitSignature(signature);
 
-    const tx3 = await trustusPaymagic.callStatic.verify(request, {
+    const tx2 = await trustusPaymagic.callStatic.verify(request, {
       request,
       deadline,
       payload,
@@ -112,6 +82,6 @@ describe("Decoder", function () {
       v}
     );
 
-    console.log(tx3);
+    console.log(tx2);
   });
 });
