@@ -116,7 +116,6 @@ abstract contract Trustus {
             packet.r,
             packet.s
         );
-        console.log("recovered", recoveredAddress);
         return (recoveredAddress != address(0)) && isTrusted[recoveredAddress];
     }
 

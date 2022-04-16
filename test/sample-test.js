@@ -1,18 +1,24 @@
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
-const sigUtil = require("eth-sig-util");
+const { signTypedData_v4 } = require("eth-sig-util");
 
-describe("Decoder", function () {
+describe("Decoder/Signing", function () {
   it("Should decode the address/price data", async function () {
-    const accounts = await hre.ethers.getSigners();
+    [signer] = await hre.ethers.getSigners();
 
     const Test = await ethers.getContractFactory("Test");
     const test = await Test.deploy();
     await test.deployed();
 
     const TrustusPaymagic = await ethers.getContractFactory("TrustusPaymagic");
-    const trustusPaymagic = await TrustusPaymagic.deploy(accounts[0].address);
+    const trustusPaymagic = await TrustusPaymagic.deploy(signer.address);
     await trustusPaymagic.deployed();
+
+    const SigningHelper = await ethers.getContractFactory("SigningHelper");
+    const signingHelper = await SigningHelper.deploy();
+    await signingHelper.deployed();
+
+    const address = ethers.utils.getAddress(trustusPaymagic.address);
 
     const nestedArray = [
       ["0x0D79AfBF97a401968836b9D906F3f87b20d45A72", 500000000],
@@ -37,41 +43,20 @@ describe("Decoder", function () {
 
     const deadline = timestamp + 300000
 
-    const request = ethers.utils.id("GetPrice(address)");
+    const request = ethers.utils.formatBytes32String("GetPrice(address)");
     const payload = encodedNested;
 
-    const domain = {
-      name: "Trustus",
-      version: "1",
-      chainId: network.config.chainId,
-      verifyingContract: trustusPaymagic.address
-    };
 
+    let messageHash = await signingHelper.hashMessage(
+      request,
+      deadline,
+      payload,
+      address
+    );
 
-    const message = {
-        request,
-        deadline,
-        payload,
-    };
+    const signingKey = new ethers.utils.SigningKey("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
 
-    const types = {
-      Packet: [
-      {
-        name: "request", 
-        type: "bytes32"
-      },{
-        name: "deadline",
-        type: "uint256"
-      },
-      {
-        name: "payload",
-        type: "bytes"
-      }
-      ]
-    }
-
-    const signature = await accounts[0]._signTypedData(domain, types, message)
-    const { v, r, s } = ethers.utils.splitSignature(signature);
+    const { r, s, v } = signingKey.signDigest(messageHash);
 
     const tx2 = await trustusPaymagic.callStatic.verify(request, {
       request,
