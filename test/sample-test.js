@@ -1,8 +1,13 @@
 const { expect } = require("chai");
 const { ethers, network } = require("hardhat");
+const { utils } = ethers;
+const { solidityKeccak256, AbiCoder } = utils;
+const sigUtil = require("eth-sig-util");
 const { signTypedData_v4 } = require("eth-sig-util");
 
-describe("Decoder/Signing", function () {
+let abiCoder = new ethers.utils.AbiCoder();
+
+describe("Decoder", function () {
   it("Should decode the address/price data", async function () {
     [signer] = await hre.ethers.getSigners();
 
@@ -13,10 +18,6 @@ describe("Decoder/Signing", function () {
     const TrustusPaymagic = await ethers.getContractFactory("TrustusPaymagic");
     const trustusPaymagic = await TrustusPaymagic.deploy(signer.address);
     await trustusPaymagic.deployed();
-
-    const SigningHelper = await ethers.getContractFactory("SigningHelper");
-    const signingHelper = await SigningHelper.deploy();
-    await signingHelper.deployed();
 
     const address = ethers.utils.getAddress(trustusPaymagic.address);
 
@@ -39,33 +40,82 @@ describe("Decoder/Signing", function () {
     const tx = await test.decoderNested(encodedNested);
     await tx.wait();
 
-    const {timestamp} = await hre.ethers.provider.getBlock();
+    ///signing
 
-    const deadline = timestamp + 300000
+    const privateKey = Buffer.from(
+      "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+      "hex"
+    );
+
+    const { timestamp } = await hre.ethers.provider.getBlock();
+
+    const deadline = timestamp + 300000;
 
     const request = ethers.utils.formatBytes32String("GetPrice(address)");
     const payload = encodedNested;
 
-
-    let messageHash = await signingHelper.hashMessage(
-      request,
-      deadline,
-      payload,
-      address
+    let packetHash = solidityKeccak256(
+      ["bytes"],
+      [
+        abiCoder.encode(
+          ["bytes32", "bytes32", "uint256", "bytes"],
+          [
+            solidityKeccak256(
+              ["string"],
+              ["VerifyPacket(bytes32 request,uint256 deadline,bytes payload)"]
+            ),
+            request,
+            deadline,
+            payload
+          ]
+        )
+      ]
     );
 
-    const signingKey = new ethers.utils.SigningKey("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+    let domainSeparator = solidityKeccak256(
+      ["bytes"],
+      [
+        abiCoder.encode(
+          ["bytes32", "bytes32", "bytes32", "uint256", "address"],
+          [
+            solidityKeccak256(
+              ["string"],
+              [
+                "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+              ]
+            ),
+            solidityKeccak256(["string"], ["Trustus"]),
+            solidityKeccak256(["string"], ["1"]),
+            31337,
+            trustusPaymagic.address
+          ]
+        )
+      ]
+    );
 
-    const { r, s, v } = signingKey.signDigest(messageHash);
+    let messageHashOffChain = solidityKeccak256(
+      ["bytes"],
+      [
+        utils.solidityPack(
+          ["string", "bytes", "bytes32"],
+          ["\x19\x01", domainSeparator, packetHash]
+        )
+      ]
+    );
 
-    const tx2 = await trustusPaymagic.callStatic.verify(request, {
-      request,
-      deadline,
-      payload,
+    const signingKey = new utils.SigningKey(privateKey);
+    const { r, s, v } = signingKey.signDigest(messageHashOffChain);
+
+    let packet = {
+      v,
       r,
       s,
-      v}
-    );
+      request,
+      deadline,
+      payload
+    };
+
+    const tx2 = await trustusPaymagic.callStatic.verify(request, packet);
 
     console.log(tx2);
   });

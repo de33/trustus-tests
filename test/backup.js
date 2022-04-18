@@ -1,5 +1,7 @@
 // const { expect } = require("chai");
 // const { ethers, network } = require("hardhat");
+// const { utils } = ethers;
+// const { solidityKeccak256, AbiCoder } = utils;
 // const sigUtil = require("eth-sig-util");
 // const { signTypedData_v4 } = require("eth-sig-util");
 
@@ -36,22 +38,37 @@
 //     const tx = await test.decoderNested(encodedNested);
 //     await tx.wait();
 
-//     const {timestamp} = await hre.ethers.provider.getBlock();
+//     ///signing
 
-//     // const deadline = timestamp + 300000
+//     const privateKeyBuffer = Buffer.from(
+//       "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+//       "hex"
+//     );
 
-//     const deadline = 2650123907;
+//     const { timestamp } = await hre.ethers.provider.getBlock();
+
+//     const deadline = timestamp + 300000;
 
 //     const request = ethers.utils.formatBytes32String("GetPrice(address)");
 //     const payload = encodedNested;
 
-
-//     const domain = {
-//       name: "Trustus",
-//       version: "1",
-//       chainId: network.config.chainId,
-//       verifyingContract: address
-//     };
+//     let packetHash = solidityKeccak256(
+//       ["bytes"],
+//       [
+//         abiCoder.encode(
+//           ["bytes32", "bytes32", "uint256", "bytes"],
+//           [
+//             solidityKeccak256(
+//               ["string"],
+//               ["VerifyPacket(bytes32 request,uint256 deadline,bytes payload)"]
+//             ),
+//             request,
+//             deadline,
+//             payload
+//           ]
+//         )
+//       ]
+//     );
 
 //     // console.log(domain)
 
@@ -59,49 +76,43 @@
 
 //     const types = {
 //       Packet: [
-//       {
-//         name: "request", 
-//         type: "bytes32"
-//       },{
-//         name: "deadline",
-//         type: "uint256"
-//       },
-//       {
-//         name: "payload",
-//         type: "bytes"
-//       }
+//         {
+//           name: "request",
+//           type: "bytes32"
+//         },
+//         {
+//           name: "deadline",
+//           type: "uint256"
+//         },
+//         {
+//           name: "payload",
+//           type: "bytes"
+//         }
 //       ],
 //       EIP712Domain: [
 //         { name: "name", type: "string" },
 //         { name: "version", type: "string" },
 //         { name: "chainId", type: "uint256" },
-//         { name: "verifyingContract", type: "address" },
+//         { name: "verifyingContract", type: "address" }
 //       ]
-//     }
+//     };
 
-  
 //     const message = {
 //       request,
 //       deadline,
 //       payload,
-//       address,
+//       address
 //       // "fc7ecbf4f091085173dad8d1d3c2dfd218c018596a572201cd849763d1114e7a"
-//   };
+//     };
 
-//   const data = {
-//     domain,
-//     message,
-//     types,
-//     primaryType: "Packet",
-//   }
-
-
-//     console.log(data)
-
-//     const privateKeyBuffer = Buffer.from("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", 'hex')
+//     const data = {
+//       domain,
+//       message,
+//       types,
+//       primaryType: "Packet"
+//     };
 
 //     const signature = await signTypedData_v4(privateKeyBuffer, { data });
-
 
 //     const { v, r, s } = ethers.utils.splitSignature(signature);
 
@@ -111,8 +122,8 @@
 //       payload,
 //       r,
 //       s,
-//       v}
-//     );
+//       v
+//     });
 
 //     console.log(tx2);
 //   });
