@@ -10,7 +10,7 @@ contract Test is TrustusPaymagic {
         uint256 price;
     }
 
-    constructor(address _trustedAddress) TrustusPaymagic(_trustedAddress){
+    constructor(address _trustedAddress) {
         _setIsTrusted(_trustedAddress, true);
     }
 
