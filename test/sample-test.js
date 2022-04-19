@@ -1,9 +1,8 @@
 const { expect } = require("chai");
-const { ethers, network } = require("hardhat");
+const { ethers } = require("hardhat");
+const { network } = require("ethers");
 const { utils } = ethers;
 const { solidityKeccak256, AbiCoder } = utils;
-const sigUtil = require("eth-sig-util");
-const { signTypedData_v4 } = require("eth-sig-util");
 
 let abiCoder = new ethers.utils.AbiCoder();
 
@@ -12,14 +11,10 @@ describe("Decoder", function () {
     [signer] = await hre.ethers.getSigners();
 
     const Test = await ethers.getContractFactory("Test");
-    const test = await Test.deploy();
+    const test = await Test.deploy(signer.address);
     await test.deployed();
 
-    const TrustusPaymagic = await ethers.getContractFactory("TrustusPaymagic");
-    const trustusPaymagic = await TrustusPaymagic.deploy(signer.address);
-    await trustusPaymagic.deployed();
-
-    const address = ethers.utils.getAddress(trustusPaymagic.address);
+    const address = ethers.utils.getAddress(test.address);
 
     const nestedArray = [
       ["0x0D79AfBF97a401968836b9D906F3f87b20d45A72", 500000000],
@@ -49,10 +44,13 @@ describe("Decoder", function () {
 
     const { timestamp } = await hre.ethers.provider.getBlock();
 
-    const deadline = timestamp + 300000;
+    const deadline = "30650391639";
 
-    const request = ethers.utils.formatBytes32String("GetPrice(address)");
+    const request =
+      "0xfc7ecbf4f091085173dad8d1d3c2dfd218c018596a572201cd849763d1114e7a";
     const payload = encodedNested;
+
+    const chainId = await signer.getChainId();
 
     let packetHash = solidityKeccak256(
       ["bytes"],
@@ -86,8 +84,8 @@ describe("Decoder", function () {
             ),
             solidityKeccak256(["string"], ["Trustus"]),
             solidityKeccak256(["string"], ["1"]),
-            31337,
-            trustusPaymagic.address
+            chainId,
+            test.address
           ]
         )
       ]
@@ -115,8 +113,14 @@ describe("Decoder", function () {
       payload
     };
 
-    const tx2 = await trustusPaymagic.callStatic.verify(request, packet);
+    // console.log(packet);
 
-    console.log(tx2);
+    const tx2 = await test.callStatic.verify(request, packet);
+
+    // console.log(tx2);
+
+    const tx3 = await test.sweep(packet);
+
+    // console.log(tx3);
   });
 });
